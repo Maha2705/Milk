@@ -16,7 +16,7 @@ import pandas as pd
 
 from sklearn import preprocessing
 
-
+def show_prediction_ui():
 # ================ Background image ===
 
 def add_bg_from_local(image_file):
