@@ -56,7 +56,7 @@ def add_bg_from_local(image_file):
 # Page routing
 def navigation():
     try:
-        query = st.experimental_get_query_params()
+        query = st.query_params()
         return query.get("p", ["home"])[0].lower()
     except:
         return "home"
