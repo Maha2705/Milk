@@ -19,7 +19,7 @@ from sklearn import preprocessing
 def show_prediction_ui():
 # ================ Background image ===
 
-def add_bg_from_local(image_file):
+  def add_bg_from_local(image_file):
     with open(image_file, "rb") as image_file:
         encoded_string = base64.b64encode(image_file.read())
     st.markdown(
