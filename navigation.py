@@ -3,8 +3,7 @@ import sqlite3
 import re
 import base64
 import os
-from Prediction import show_prediction_ui
-
+from Prediction import show_prediction_ui  # Ensure show_prediction_ui() is defined in Prediction.py
 
 # 🌟 Top nav links
 st.markdown(
@@ -37,7 +36,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 🧠 Background setup
+# 🔧 Background setup
 def add_bg_from_local(image_file):
     if os.path.exists(image_file):
         with open(image_file, "rb") as file:
@@ -54,8 +53,9 @@ def add_bg_from_local(image_file):
             unsafe_allow_html=True
         )
 
+# 🌐 Routing based on ?p=
 def navigation():
-     return st.query_params.get('p', ['home'])[0].lower()
+    return st.query_params.get('p', ['home'])[0].lower()
 
 page = navigation()
 
@@ -111,7 +111,7 @@ elif page == "reg":
                 if validate_email(email) and validate_phone(phone):
                     create_user(conn, (name, password, email, phone))
                     st.success("✅ Registered successfully! Redirecting to prediction page...")
-                    show_prediction_ui()
+                    show_prediction_ui()  # Call the ML prediction page
                 else:
                     st.error("Invalid email or phone number!")
             else:
@@ -130,7 +130,7 @@ elif page == "log":
         cur.execute("SELECT * FROM users WHERE name=? AND password=?", (name, password))
         return cur.fetchone()
 
-    conn = create_connection()
+    conn = sqlite3.connect("dbs.db")
     conn.execute('''CREATE TABLE IF NOT EXISTS users (
                     id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
@@ -145,11 +145,11 @@ elif page == "log":
         user = validate_user(conn, name, password)
         if user:
             st.success(f"Welcome back, {user[1]}! 🎉")
-            show_prediction_ui()
+            show_prediction_ui()  # Call ML prediction function
         else:
             st.error("Invalid credentials.")
     conn.close()
 
-# ❌ Invalid Page
+# ❌ PAGE NOT FOUND
 else:
-    st.error("Page not found.")
+    st.warning("⚠️ Page not found. Please use the menu above.")
