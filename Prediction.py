@@ -3,7 +3,7 @@ import streamlit as st
 import base64
 import numpy as np
 import matplotlib.pyplot as plt 
-from tkinter.filedialog import askopenfilename
+
 
 
 from streamlit_option_menu import option_menu
