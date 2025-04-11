@@ -1,51 +1,30 @@
 import streamlit as st
-import sqlite3
-import re
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 import base64
 import os
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn import preprocessing, metrics
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+import pickle
+import warnings
+warnings.filterwarnings("ignore")
 
+st.set_page_config(page_title="Bagasse Quality Prediction", layout="centered")
 
-# 🌟 Top nav links
-st.markdown(
-    """
-    <style>
-    .nav-links {
-        text-align: right;
-        padding: 10px;
-    }
-    .nav-links a {
-        text-decoration: none;
-        padding: 8px 15px;
-        font-weight: bold;
-        color: #d35400;
-        border: 1px solid #d35400;
-        border-radius: 5px;
-        margin-left: 10px;
-    }
-    .nav-links a:hover {
-        background-color: #d35400;
-        color: white;
-    }
-    </style>
-    <div class='nav-links'>
-        <a href='?p=home'>🏠 Home</a>
-        <a href='?p=reg'>📝 Register</a>
-        <a href='?p=log'>🔐 Login</a>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-# Background
-def add_bg_from_local(image_file):
+# Set background
+def add_bg(image_file):
     if os.path.exists(image_file):
-        with open(image_file, "rb") as file:
-            encoded_string = base64.b64encode(file.read())
+        with open(image_file, "rb") as img:
+            encoded = base64.b64encode(img.read()).decode()
         st.markdown(
             f"""
             <style>
             .stApp {{
-                background-image: url(data:image/png;base64,{encoded_string.decode()});
+                background-image: url(data:image/jpg;base64,{encoded});
                 background-size: cover;
             }}
             </style>
@@ -53,101 +32,59 @@ def add_bg_from_local(image_file):
             unsafe_allow_html=True
         )
 
-# Page routing
-def navigation():
-    try:
-        query = st.experimental_get_query_params()
-        return query.get("p", ["home"])[0].lower()
-    except:
-        return "home"
+add_bg("back.jpg")
 
+st.markdown("<h1 style='color:#d35400;text-align:center;'>Bagasse Quality Prediction</h1>", unsafe_allow_html=True)
 
-page = navigation()
+# Load data
+df = pd.read_csv("bagasse_quality_dataset.csv")
+df = df.dropna()
 
-# 🏠 HOME PAGE
-if page == "home":
-    add_bg_from_local("1.jpg")
-    st.markdown("<h1 style='text-align:center; color:#d35400;'>Welcome to the Smart Milk Packaging System</h1>", unsafe_allow_html=True)
-    st.write("---")
-    st.markdown("<p style='text-align:justify;'>Using ML to predict quality, shelf life, and sustainability of packaging using Bagasse, PLA, and MAP.</p>", unsafe_allow_html=True)
+# Label Encoding
+label_encoder = preprocessing.LabelEncoder()
+df['Quality Classification'] = label_encoder.fit_transform(df['Quality Classification'])
 
-# 📝 REGISTER PAGE
-elif page == "reg":
-    add_bg_from_local("reg.avif")
-    st.header("📝 Register")
+X = df.drop('Quality Classification', axis=1)
+y = df['Quality Classification']
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=0)
 
-    def create_connection():
-        return sqlite3.connect("dbs.db")
+# Train model
+scaler = StandardScaler()
+X_train_scaled = scaler.fit_transform(X_train)
 
-    def create_user(conn, user):
-        cur = conn.cursor()
-        cur.execute("INSERT INTO users(name, password, email, phone) VALUES(?,?,?,?)", user)
-        conn.commit()
+pca = PCA(n_components=6)
+X_train_pca = pca.fit_transform(X_train_scaled)
 
-    def user_exists(conn, email):
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE email=?", (email,))
-        return cur.fetchone() is not None
+model = RandomForestClassifier()
+model.fit(X_train, y_train)
+pred = model.predict(X_test)
 
-    def validate_email(email):
-        return re.match(r'^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$', email)
+acc = metrics.accuracy_score(pred, y_test) * 100
 
-    def validate_phone(phone):
-        return re.match(r'^[6-9]\d{9}$', phone)
+# Save model
+with open("model.pickle", "wb") as f:
+    pickle.dump(model, f)
 
-    conn = create_connection()
-    conn.execute('''CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        password TEXT NOT NULL,
-        email TEXT NOT NULL UNIQUE,
-        phone TEXT NOT NULL);''')
+# Input form
+st.markdown("### Enter the following details to predict quality")
 
-    name = st.text_input("Name")
-    password = st.text_input("Password", type="password")
-    confirm = st.text_input("Confirm Password", type="password")
-    email = st.text_input("Email")
-    phone = st.text_input("Phone")
+a1 = st.text_input("Sample ID")
+a2 = st.text_input("Moisture Content (%)")
+a3 = st.text_input("Fiber Length (mm)")
+a4 = st.text_input("Pulp Yield (%)")
+a5 = st.text_input("Ash Content (%)")
+a6 = st.text_input("Fiber Diameter (µm)")
+a7 = st.text_input("Sugar Content (%)")
+a8 = st.text_input("Lignin Content (%)")
 
-    if st.button("Register"):
-        if password != confirm:
-            st.error("Passwords do not match!")
-        elif user_exists(conn, email):
-            st.error("User already exists!")
-        elif not (validate_email(email) and validate_phone(phone)):
-            st.error("Invalid email or phone!")
-        else:
-            create_user(conn, (name, password, email, phone))
-            st.success("✅ Registered successfully!")
-            show_prediction_ui()
-
-    conn.close()
-
-# 🔐 LOGIN PAGE
-elif page == "log":
-    add_bg_from_local("login.jpg")
-    st.header("🔐 Login")
-
-    def validate_user(conn, name, password):
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE name=? AND password=?", (name, password))
-        return cur.fetchone()
-
-    conn = sqlite3.connect("dbs.db")
-
-    name = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-        user = validate_user(conn, name, password)
-        if user:
-            st.success(f"Welcome, {user[1]} 🎉")
-            show_prediction_ui()
-        else:
-            st.error("Invalid credentials.")
-
-    conn.close()
-
-# ❌ FALLBACK
-else:
-    st.error("❌ Page not found.")
+if st.button("Predict Quality"):
+    if all([a1, a2, a3, a4, a5, a6, a7, a8]):
+        try:
+            data = [int(a1), float(a2), float(a3), float(a4), float(a5), float(a6), float(a7), float(a8)]
+            result = model.predict([data])[0]
+            quality = label_encoder.inverse_transform([result])[0]
+            st.success(f"🎯 Predicted Quality: {quality}")
+        except Exception as e:
+            st.error("Invalid input format. Please enter correct numerical values.")
+    else:
+        st.warning("Please fill all input fields.")
