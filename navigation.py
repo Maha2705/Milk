@@ -55,7 +55,7 @@ def add_bg_from_local(image_file):
         )
 
 def navigation():
-    return st.query_params.get('p', ['home'])[0]
+     return st.query_params.get('p', ['home'])[0].lower()
 
 page = navigation()
 
