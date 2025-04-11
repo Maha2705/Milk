@@ -3,7 +3,7 @@ import sqlite3
 import re
 import base64
 import os
-from Prediction import show_prediction_ui
+
 
 # 🌟 Top nav links
 st.markdown(
